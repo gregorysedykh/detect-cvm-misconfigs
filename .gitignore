@@ -12,3 +12,5 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+cvm-misconfigs/gcp/terraform.tfvars
+cvm-misconfigs/gcp/*.auto.tfvars
