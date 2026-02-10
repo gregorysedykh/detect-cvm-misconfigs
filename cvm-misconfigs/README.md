@@ -10,6 +10,12 @@ This folder is organised by cloud, then by scenario.
 
 ## How to run a scenario
 
+Make sure that you export the `subscription_id` variable for Azure:
+
+```bash
+export TF_VAR_subscription_id="<your-subscription-id>"
+```
+
 1. Authenticate to the target cloud.
 2. Initialise the cloud stack.
 3. Plan/apply with the scenario file.
