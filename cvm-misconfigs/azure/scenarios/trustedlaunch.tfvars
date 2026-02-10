@@ -1,0 +1,28 @@
+location                       = "switzerlandnorth"
+resource_group_name            = "rg-cvm-test"
+virtual_network_name           = "cvm-vnet"
+virtual_network_address_space  = ["10.0.0.0/16"]
+subnet_name                    = "cvm-subnet"
+subnet_address_prefixes        = ["10.0.1.0/24"]
+public_ip_name                 = "cvm-pip"
+public_ip_sku                  = "Standard"
+public_ip_zones                = ["1"]
+network_security_group_name    = "cvm-nsg"
+network_interface_name         = "cvm-nic"
+accelerated_networking_enabled = false
+vm_name                        = "cvm-test"
+vm_size                        = "Standard_D2s_v3"
+vm_zone                        = "1"
+admin_username                 = "azureuser"
+ssh_public_key_path            = "~/.ssh/id_ed25519.pub"
+secure_boot_enabled            = true
+vtpm_enabled                   = true
+image_publisher                = "Canonical"
+image_offer                    = "ubuntu-24_04-lts"
+image_sku                      = "ubuntu-pro-cvm"
+image_version                  = "latest"
+
+tags = {
+  cloud    = "azure"
+  scenario = "trustedlaunch"
+}
