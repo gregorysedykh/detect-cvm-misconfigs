@@ -34,3 +34,33 @@ variable "access_token" {
   type        = string
   default     = null
 }
+
+variable "confidential_instance_type" {
+  description = "Confidential instance type (e.g. SEV, SEV_SNP)."
+  type        = string
+  default     = "SEV_SNP"
+}
+
+variable "enable_integrity_monitoring" {
+  description = "Enable integrity monitoring on the VM."
+  type        = bool
+  default     = true
+}
+
+variable "enable_secure_boot" {
+  description = "Enable Secure Boot on the VM."
+  type        = bool
+  default     = true
+}
+
+variable "enable_vtpm" {
+  description = "Enable vTPM on the VM."
+  type        = bool
+  default     = true
+}
+
+variable "labels" {
+  description = "Labels to apply to the VM."
+  type        = map(string)
+  default     = {}
+}

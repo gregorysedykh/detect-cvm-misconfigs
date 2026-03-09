@@ -2,6 +2,8 @@
 *.tfstate
 *.tfstate.*
 *.tfplan
+__pycache__/
+*.py[cod]
 crash.log
 crash.*.log
 *.pem

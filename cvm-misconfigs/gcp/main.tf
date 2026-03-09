@@ -17,12 +17,10 @@ resource "google_compute_instance" "cvm-test" {
   enable_display      = false
 
   confidential_instance_config {
-    confidential_instance_type = "SEV_SNP"
+    confidential_instance_type = var.confidential_instance_type
   }
 
-  labels = {
-    goog-ec-src = "vm_add-tf"
-  }
+  labels = var.labels
 
   machine_type     = "n2d-standard-2"
   min_cpu_platform = "AMD Milan"
@@ -52,9 +50,9 @@ resource "google_compute_instance" "cvm-test" {
   }
 
   shielded_instance_config {
-    enable_integrity_monitoring = false
-    enable_secure_boot          = false
-    enable_vtpm                 = false
+    enable_integrity_monitoring = var.enable_integrity_monitoring
+    enable_secure_boot          = var.enable_secure_boot
+    enable_vtpm                 = var.enable_vtpm
   }
 
   zone = var.zone
