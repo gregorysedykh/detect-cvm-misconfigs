@@ -15,7 +15,7 @@ vm_size                          = "Standard_DC2as_v5"
 vm_zone                          = "1"
 admin_username                   = "azureuser"
 ssh_public_key_path              = "~/.ssh/id_ed25519.pub"
-secure_boot_enabled              = false
+secure_boot_enabled              = true
 vtpm_enabled                     = true
 os_disk_security_encryption_type = "DiskWithVMGuestState"
 image_publisher                  = "Canonical"
@@ -25,5 +25,5 @@ image_version                    = "latest"
 
 tags = {
   cloud    = "azure"
-  scenario = "nosecureboot"
+  scenario = "noOSdiskencryption"
 }

@@ -2,14 +2,11 @@ from checkov.common.models.enums import CheckCategories, CheckResult
 from checkov.terraform.checks.resource.base_resource_check import BaseResourceCheck
 
 
-class AzureSecureBootEnabled(BaseResourceCheck):
+class AWSSEVSNPEnabled(BaseResourceCheck):
     def __init__(self) -> None:
-        name = "Ensure Secure Boot is enabled for Azure virtual machines"
-        id = "AzureSecureBootEnabled"
-        supported_resources = [
-            "azurerm_linux_virtual_machine",
-            "azurerm_windows_virtual_machine",
-        ]
+        name = "Ensure AMD SEV-SNP is enabled for AWS instances"
+        id = "AWSSEVSNPEnabled"
+        supported_resources = ["aws_instance"]
         categories = [CheckCategories.GENERAL_SECURITY]
         super().__init__(
             name=name,
@@ -19,10 +16,15 @@ class AzureSecureBootEnabled(BaseResourceCheck):
         )
 
     def scan_resource_conf(self, conf: dict[str, list]) -> CheckResult:
-        secure_boot_enabled = conf.get("secure_boot_enabled")
-        if secure_boot_enabled and secure_boot_enabled[0] is True:
+        cpu_options = conf.get("cpu_options")
+        if not cpu_options:
+            return CheckResult.FAILED
+
+        amd_sev_snp = cpu_options[0].get("amd_sev_snp")
+        if amd_sev_snp and amd_sev_snp[0] == "enabled":
             return CheckResult.PASSED
+
         return CheckResult.FAILED
 
 
-check = AzureSecureBootEnabled()
+check = AWSSEVSNPEnabled()

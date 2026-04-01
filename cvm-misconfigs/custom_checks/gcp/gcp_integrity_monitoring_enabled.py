@@ -2,10 +2,10 @@ from checkov.common.models.enums import CheckCategories, CheckResult
 from checkov.terraform.checks.resource.base_resource_check import BaseResourceCheck
 
 
-class GCPSecureBootEnabled(BaseResourceCheck):
+class GCPIntegrityMonitoringEnabled(BaseResourceCheck):
     def __init__(self) -> None:
-        name = "Ensure Secure Boot is enabled for GCP virtual machines"
-        id = "GCPSecureBootEnabled"
+        name = "Ensure integrity monitoring is enabled for GCP virtual machines"
+        id = "GCPIntegrityMonitoringEnabled"
         supported_resources = ["google_compute_instance"]
         categories = [CheckCategories.GENERAL_SECURITY]
         super().__init__(
@@ -20,11 +20,11 @@ class GCPSecureBootEnabled(BaseResourceCheck):
         if not shielded_instance_config:
             return CheckResult.FAILED
 
-        enable_secure_boot = shielded_instance_config[0].get("enable_secure_boot")
-        if enable_secure_boot and enable_secure_boot[0] is True:
+        enable_integrity_monitoring = shielded_instance_config[0].get("enable_integrity_monitoring")
+        if enable_integrity_monitoring and enable_integrity_monitoring[0] is True:
             return CheckResult.PASSED
 
         return CheckResult.FAILED
 
 
-check = GCPSecureBootEnabled()
+check = GCPIntegrityMonitoringEnabled()

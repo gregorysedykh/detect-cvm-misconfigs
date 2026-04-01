@@ -2,14 +2,11 @@ from checkov.common.models.enums import CheckCategories, CheckResult
 from checkov.terraform.checks.resource.base_resource_check import BaseResourceCheck
 
 
-class AzureSecureBootEnabled(BaseResourceCheck):
+class GCPVTPMEnabled(BaseResourceCheck):
     def __init__(self) -> None:
-        name = "Ensure Secure Boot is enabled for Azure virtual machines"
-        id = "AzureSecureBootEnabled"
-        supported_resources = [
-            "azurerm_linux_virtual_machine",
-            "azurerm_windows_virtual_machine",
-        ]
+        name = "Ensure vTPM is enabled for GCP virtual machines"
+        id = "GCPVTPMEnabled"
+        supported_resources = ["google_compute_instance"]
         categories = [CheckCategories.GENERAL_SECURITY]
         super().__init__(
             name=name,
@@ -19,10 +16,15 @@ class AzureSecureBootEnabled(BaseResourceCheck):
         )
 
     def scan_resource_conf(self, conf: dict[str, list]) -> CheckResult:
-        secure_boot_enabled = conf.get("secure_boot_enabled")
-        if secure_boot_enabled and secure_boot_enabled[0] is True:
+        shielded_instance_config = conf.get("shielded_instance_config")
+        if not shielded_instance_config:
+            return CheckResult.FAILED
+
+        enable_vtpm = shielded_instance_config[0].get("enable_vtpm")
+        if enable_vtpm and enable_vtpm[0] is True:
             return CheckResult.PASSED
+
         return CheckResult.FAILED
 
 
-check = AzureSecureBootEnabled()
+check = GCPVTPMEnabled()
