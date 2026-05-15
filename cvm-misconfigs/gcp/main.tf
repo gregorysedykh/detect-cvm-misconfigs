@@ -1,15 +1,82 @@
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
+resource "google_project_service" "cloudkms" {
+  service            = "cloudkms.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "compute" {
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_kms_key_ring" "cvm_ring" {
+  name     = "cvm-keyring"
+  location = var.region
+
+  depends_on = [google_project_service.cloudkms]
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "google_kms_crypto_key" "cvm_key" {
+  name            = "cvm-key"
+  key_ring        = google_kms_key_ring.cvm_ring.id
+  purpose         = "ENCRYPT_DECRYPT"
+
+  version_template {
+    algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+    protection_level = "HSM"
+  }
+
+  rotation_period = "7776000s"
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "google_compute_disk" "boot_disk" {
+  name  = "cvm-test-boot"
+  type  = "hyperdisk-balanced"
+  zone  = var.zone
+  size  = 50
+
+  provisioned_iops       = 3000
+  provisioned_throughput = 140
+
+  image = "projects/ubuntu-os-accelerator-images/global/images/ubuntu-accelerator-2404-amd64-with-nvidia-580-v20260203"
+
+  enable_confidential_compute = true
+
+  disk_encryption_key {
+    kms_key_self_link = google_kms_crypto_key.cvm_key.id
+  }
+}
+
+resource "google_kms_crypto_key_iam_member" "compute_agent_encrypter" {
+  crypto_key_id = google_kms_crypto_key.cvm_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  member = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+}
+
+resource "google_service_account" "confidential_vm_sa" {
+  account_id   = "confidential-vm-sa"
+  display_name = "Confidential VM Service Account"
+}
+
 resource "google_compute_instance" "cvm-test" {
   boot_disk {
-    auto_delete = true
-    device_name = "cvm-test"
-
-    initialize_params {
-      image = "projects/ubuntu-os-accelerator-images/global/images/ubuntu-accelerator-2404-amd64-with-nvidia-580-v20260203"
-      size  = 10
-      type  = "pd-standard"
-    }
-
-    mode = "READ_WRITE"
+    auto_delete       = true
+    device_name       = "cvm-test"
+    source            = google_compute_disk.boot_disk.self_link
+    kms_key_self_link = google_kms_crypto_key.cvm_key.id
+    mode              = "READ_WRITE"
   }
 
   can_ip_forward      = false
@@ -45,8 +112,8 @@ resource "google_compute_instance" "cvm-test" {
   }
 
   service_account {
-    email  = var.service_account_email
-    scopes = ["https://www.googleapis.com/auth/devstorage.read_only", "https://www.googleapis.com/auth/logging.write", "https://www.googleapis.com/auth/monitoring.write", "https://www.googleapis.com/auth/service.management.readonly", "https://www.googleapis.com/auth/servicecontrol", "https://www.googleapis.com/auth/trace.append"]
+    email  = google_service_account.confidential_vm_sa.email
+    scopes = ["cloud-platform"]
   }
 
   shielded_instance_config {
@@ -56,4 +123,11 @@ resource "google_compute_instance" "cvm-test" {
   }
 
   zone = var.zone
+
+  key_revocation_action_type = "STOP"
+
+  depends_on = [
+    google_kms_crypto_key_iam_member.compute_agent_encrypter
+  ]
+
 }

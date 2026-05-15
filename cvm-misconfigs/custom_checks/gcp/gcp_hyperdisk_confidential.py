@@ -2,11 +2,11 @@ from checkov.common.models.enums import CheckCategories, CheckResult
 from checkov.terraform.checks.resource.base_resource_check import BaseResourceCheck
 
 
-class GCPSNPOrTDXEnabled(BaseResourceCheck):
+class GCPHyperdiskConfidentialMode(BaseResourceCheck):
     def __init__(self) -> None:
-        name = "Ensure that GCP virtual machines have either AMD SEV-SNP or Intel TDX enabled"
-        id = "GCPSNPOrTDXEnabled"
-        supported_resources = ["google_compute_instance"]
+        name = "Ensure disks used with confidential computing are Hyperdisk balanced with Confidential mode enabled"
+        id = "GCPHyperdiskConfidentialMode"
+        supported_resources = ["google_compute_disk"]
         categories = [CheckCategories.GENERAL_SECURITY]
         super().__init__(
             name=name,
@@ -16,15 +16,13 @@ class GCPSNPOrTDXEnabled(BaseResourceCheck):
         )
 
     def scan_resource_conf(self, conf: dict[str, list]) -> CheckResult:
-        confidential_instance_config = conf.get("confidential_instance_config")
-        if not confidential_instance_config:
+        
+        if "type" in conf and conf["type"][0] != "hyperdisk-balanced":
             return CheckResult.FAILED
-
-        confidential_instance_type = confidential_instance_config[0].get("confidential_instance_type")
-        if confidential_instance_type and confidential_instance_type[0] in ["SEV_SNP", "TDX"]:
+        if "enable_confidential_compute" in conf and conf["enable_confidential_compute"][0] is True:
             return CheckResult.PASSED
 
         return CheckResult.FAILED
 
 
-check = GCPSNPOrTDXEnabled()
+check = GCPHyperdiskConfidentialMode

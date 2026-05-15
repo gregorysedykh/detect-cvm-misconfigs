@@ -5,5 +5,5 @@ enable_vtpm                  = true
 
 labels = {
   goog-ec-src = "vm_add-tf"
-  scenario    = "noIntegrityMonitoring"
+  scenario    = "nointegritymonitoring"
 }

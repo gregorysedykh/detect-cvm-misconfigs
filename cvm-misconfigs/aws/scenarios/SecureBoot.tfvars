@@ -1,7 +1,7 @@
 instance_type = "m6a.large"
 amd_sev_snp   = "enabled"
-ami           = "ami-0acbaaa575357f123"
+ami           = "ami-00ef80236966b4890"
 
 tags = {
-  scenario = "TPM"
+  scenario = "SecureBoot"
 }

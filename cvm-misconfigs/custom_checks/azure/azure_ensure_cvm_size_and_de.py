@@ -77,6 +77,11 @@ class AzureEnsureCVMSizeAndDE(BaseResourceCheck):
             self.details.append("OS disk security encryption type is not specified.")
             return CheckResult.FAILED
 
+        valid_types = {"DiskWithVMGuestState", "VMGuestStateOnly"}
+        if security_encryption_type[0] not in valid_types:
+            self.details.append(f"Invalid OS disk security encryption type: {security_encryption_type[0]}. Must be one of: {', '.join(sorted(valid_types))}")
+            return CheckResult.FAILED
+
         return CheckResult.PASSED
 
 

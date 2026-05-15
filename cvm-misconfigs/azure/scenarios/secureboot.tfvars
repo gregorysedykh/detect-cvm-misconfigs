@@ -11,13 +11,13 @@ network_security_group_name      = "cvm-nsg"
 network_interface_name           = "cvm-nic"
 accelerated_networking_enabled   = false
 vm_name                          = "cvm-test"
-vm_size                          = "Standard_DC2as_v5"
+vm_size                          = "Standard_DC2ads_v5"
 vm_zone                          = "1"
 admin_username                   = "azureuser"
 ssh_public_key_path              = "~/.ssh/id_ed25519.pub"
 secure_boot_enabled              = true
 vtpm_enabled                     = true
-os_disk_security_encryption_type = "VMGuestStateOnly"
+os_disk_security_encryption_type = "DiskWithVMGuestState"
 image_publisher                  = "Canonical"
 image_offer                      = "ubuntu-24_04-lts"
 image_sku                        = "ubuntu-pro-cvm"
@@ -25,5 +25,5 @@ image_version                    = "latest"
 
 tags = {
   cloud    = "azure"
-  scenario = "noOSdiskencryption"
+  scenario = "secureboot"
 }

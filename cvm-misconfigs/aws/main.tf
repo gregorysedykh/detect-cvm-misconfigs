@@ -44,14 +44,14 @@ resource "aws_instance" "cvm-test" {
 
   tags = var.tags
 
-  # lifecycle {
-  #   precondition {
-  #     condition     = data.aws_ami.selected.tpm_support == "v2.0"
-  #     error_message = "AMI must have NitroTPM v2.0 support enabled."
-  #   }
-  #   precondition {
-  #     condition     = data.aws_ami.selected.boot_mode == "uefi" && data.aws_ami.selected.uefi_data != null && data.aws_ami.selected.uefi_data != ""
-  #     error_message = "AMI must use strict UEFI boot mode with Secure Boot keys configured (uefi_data)."
-  #   }
-  # }
+  lifecycle {
+    precondition {
+      condition     = data.aws_ami.selected.tpm_support == "v2.0"
+      error_message = "AMI must have NitroTPM v2.0 support enabled."
+    }
+    # precondition {
+    #   condition     = data.aws_ami.selected.boot_mode == "uefi" && data.aws_ami.selected.uefi_data != null && data.aws_ami.selected.uefi_data != ""
+    #   error_message = "AMI must use UEFI boot mode with Secure Boot keys configured (uefi_data)."
+    # }
+  }
 }
