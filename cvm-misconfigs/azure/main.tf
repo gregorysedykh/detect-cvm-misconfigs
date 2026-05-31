@@ -97,8 +97,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   network_interface_ids = [azurerm_network_interface.this.id]
 
   identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.cvm.id]
+    type         = "SystemAssigned"
   }
 
   admin_ssh_key {
@@ -125,10 +124,10 @@ resource "azurerm_linux_virtual_machine" "this" {
   tags                = var.tags
 
   depends_on = [
-    azurerm_role_assignment.des_encryption,
-    azurerm_role_assignment.cvm_key_release,
-    azurerm_role_assignment.cvm_orchestrator_release,
+    azurerm_key_vault_access_policy.des,
+    azurerm_key_vault_access_policy.cvm_agent,
   ]
+
 }
 
 resource "azurerm_key_vault" "this" {
@@ -140,56 +139,53 @@ resource "azurerm_key_vault" "this" {
   
   purge_protection_enabled    = var.key_vault_purge_protection_enabled
   enabled_for_disk_encryption = true
-  rbac_authorization_enabled  = true
+  rbac_authorization_enabled  = false
   
   tags                        = var.tags
 }
 
-data "azuread_service_principal" "cvm_orchestrator" {
-  client_id = "bf7b6499-ff71-4aa2-97a4-f372087be7f0"
+resource "azurerm_key_vault_access_policy" "cvm_agent" {
+  key_vault_id = azurerm_key_vault.this.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = "4cbfc523-b9b4-4825-8f78-1d9e5ca7a897"
+
+  key_permissions = ["Get", "Release"]
 }
-
-
-resource "azurerm_role_assignment" "cvm_orchestrator_release" {
-  principal_id         = data.azuread_service_principal.cvm_orchestrator.object_id
-  scope                = azapi_resource.cvm_key.id
-  role_definition_name = "Key Vault Crypto Service Release User"
-}
-
-resource "azurerm_role_assignment" "des_encryption" {
-  principal_id         = azurerm_disk_encryption_set.this.identity[0].principal_id
-  scope                = azurerm_key_vault.this.id
-  role_definition_name = "Key Vault Crypto Service Encryption User"
-}
-
-resource "azurerm_user_assigned_identity" "cvm" {
-  name                = "${var.vm_name}-identity"
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
-}
-
-resource "azurerm_role_assignment" "cvm_key_release" {
-  principal_id         = azurerm_user_assigned_identity.cvm.principal_id
-  scope                = azapi_resource.cvm_key.id
-  role_definition_name = "Key Vault Crypto Service Release User"
-}
-
-
 
 resource "azurerm_disk_encryption_set" "this" {
-  name                = "des"
-  resource_group_name = azurerm_resource_group.this.name
+  name                = var.disk_encryption_set_name
   location            = azurerm_resource_group.this.location
-
-  key_vault_key_id = local.kek_url
-
-  encryption_type = "ConfidentialVmEncryptedWithCustomerKey"
+  resource_group_name = azurerm_resource_group.this.name
+  key_vault_key_id    = local.kek_url
+  encryption_type     = "ConfidentialVmEncryptedWithCustomerKey"
 
   identity {
     type = "SystemAssigned"
   }
-
 }
+
+resource "azurerm_key_vault_access_policy" "des" {
+  key_vault_id = azurerm_key_vault.this.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_disk_encryption_set.this.identity[0].principal_id
+
+  key_permissions = ["Get", "WrapKey", "UnwrapKey"]
+}
+
+
+resource "azurerm_key_vault_access_policy" "current_user" {
+  key_vault_id = azurerm_key_vault.this.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  key_permissions = ["Create", "Delete", "Get", "List", "Purge", "Update", "GetRotationPolicy"]
+}
+
+# resource "azurerm_role_assignment" "cvm_key_release" {
+#   principal_id         = azurerm_linux_virtual_machine.this.identity[0].principal_id
+#   scope                = azapi_resource.cvm_key.id
+#   role_definition_name = "Key Vault Crypto Service Release User"
+# }
 
 resource "azurerm_virtual_machine_extension" "guest_attestation" {
   name                       = "GuestAttestation"
@@ -224,7 +220,7 @@ data "local_file" "cvm_release_policy" {
 }
 
 resource "azapi_resource" "cvm_key" {
-  type                   = "Microsoft.KeyVault/vaults/keys@2022-07-01"
+  type                   = "Microsoft.KeyVault/vaults/keys@2025-05-01"
   name                   = var.vm_name
   parent_id              = azurerm_key_vault.this.id
   response_export_values = ["properties.keyUriWithVersion"]
@@ -250,23 +246,23 @@ resource "azapi_resource" "cvm_key" {
   }
 }
 
-resource "azurerm_virtual_machine_extension" "azure_disk_encryption" {
-  name                       = "AzureDiskEncryptionForLinux"
-  virtual_machine_id         = azurerm_linux_virtual_machine.this.id
-  type_handler_version       = "1.1"
-  publisher                  = "Microsoft.Azure.Security"
-  type                       = "AzureDiskEncryptionForLinux"
-  auto_upgrade_minor_version = true
-  settings                   = <<EOF
-{
-  "EncryptionOperation": "EnableEncryption",
-  "KeyVaultURL": "${azurerm_key_vault.this.vault_uri}",
-  "KeyVaultResourceId": "${azurerm_key_vault.this.id}",
-  "KeyEncryptionAlgorithm": "RSA-OAEP",
-  "VolumeType": "Data",
-  "KeyEncryptionKeyURL": "${local.kek_url}",
-  "KekVaultResourceId": "${azapi_resource.cvm_key.parent_id}"
-}
-  EOF
-  depends_on = [ azurerm_role_assignment.cvm_key_release ]
-}
+# resource "azurerm_virtual_machine_extension" "azure_disk_encryption" {
+#   name                       = "AzureDiskEncryptionForLinux"
+#   virtual_machine_id         = azurerm_linux_virtual_machine.this.id
+#   type_handler_version       = "1.1"
+#   publisher                  = "Microsoft.Azure.Security"
+#   type                       = "AzureDiskEncryptionForLinux"
+#   auto_upgrade_minor_version = true
+#   settings                   = <<EOF
+# {
+#   "EncryptionOperation": "EnableEncryption",
+#   "KeyVaultURL": "${azurerm_key_vault.this.vault_uri}",
+#   "KeyVaultResourceId": "${azurerm_key_vault.this.id}",
+#   "KeyEncryptionAlgorithm": "RSA-OAEP",
+#   "VolumeType": "Data",
+#   "KeyEncryptionKeyURL": "${local.kek_url}",
+#   "KekVaultResourceId": "${azapi_resource.cvm_key.parent_id}"
+# }
+#   EOF
+#   depends_on = [ azurerm_role_assignment.cvm_key_release, ]
+# }

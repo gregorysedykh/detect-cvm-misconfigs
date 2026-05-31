@@ -6,7 +6,7 @@ variable "subscription_id" {
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "switzerlandnorth"
+  default     = "westeurope"
 }
 
 variable "resource_group_name" {
@@ -180,4 +180,10 @@ variable "key_vault_purge_protection_enabled" {
   description = "Enable purge protection for the Key Vault"
   type        = bool
   default     = true
+}
+
+variable "disk_encryption_set_name" {
+  description = "Name for the Disk Encryption Set"
+  type        = string
+  default     = "cvm-des"
 }
