@@ -181,6 +181,15 @@ resource "azurerm_key_vault_access_policy" "current_user" {
   key_permissions = ["Create", "Delete", "Get", "List", "Purge", "Update", "GetRotationPolicy"]
 }
 
+resource "azurerm_key_vault_access_policy" "cvm_key_release" {
+  key_vault_id = azurerm_key_vault.this.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_linux_virtual_machine.this.identity[0].principal_id
+
+  key_permissions    = ["Get", "Release", "WrapKey", "UnwrapKey"]
+  secret_permissions = ["Get", "Set", "List"]
+}
+
 # resource "azurerm_role_assignment" "cvm_key_release" {
 #   principal_id         = azurerm_linux_virtual_machine.this.identity[0].principal_id
 #   scope                = azapi_resource.cvm_key.id
@@ -246,23 +255,26 @@ resource "azapi_resource" "cvm_key" {
   }
 }
 
-# resource "azurerm_virtual_machine_extension" "azure_disk_encryption" {
-#   name                       = "AzureDiskEncryptionForLinux"
-#   virtual_machine_id         = azurerm_linux_virtual_machine.this.id
-#   type_handler_version       = "1.1"
-#   publisher                  = "Microsoft.Azure.Security"
-#   type                       = "AzureDiskEncryptionForLinux"
-#   auto_upgrade_minor_version = true
-#   settings                   = <<EOF
-# {
-#   "EncryptionOperation": "EnableEncryption",
-#   "KeyVaultURL": "${azurerm_key_vault.this.vault_uri}",
-#   "KeyVaultResourceId": "${azurerm_key_vault.this.id}",
-#   "KeyEncryptionAlgorithm": "RSA-OAEP",
-#   "VolumeType": "Data",
-#   "KeyEncryptionKeyURL": "${local.kek_url}",
-#   "KekVaultResourceId": "${azapi_resource.cvm_key.parent_id}"
-# }
-#   EOF
-#   depends_on = [ azurerm_role_assignment.cvm_key_release, ]
-# }
+resource "azurerm_virtual_machine_extension" "azure_disk_encryption" {
+  name                       = "AzureDiskEncryptionForLinux"
+  virtual_machine_id         = azurerm_linux_virtual_machine.this.id
+  type_handler_version       = "1.1"
+  publisher                  = "Microsoft.Azure.Security"
+  type                       = "AzureDiskEncryptionForLinux"
+  auto_upgrade_minor_version = true
+  settings                   = <<EOF
+{
+  "EncryptionOperation": "EnableEncryption",
+  "KeyVaultURL": "${azurerm_key_vault.this.vault_uri}",
+  "KeyVaultResourceId": "${azurerm_key_vault.this.id}",
+  "KeyEncryptionAlgorithm": "RSA-OAEP",
+  "VolumeType": "Data",
+  "KeyEncryptionKeyURL": "${local.kek_url}",
+  "KekVaultResourceId": "${azapi_resource.cvm_key.parent_id}"
+}
+  EOF
+  depends_on = [
+    azurerm_key_vault_access_policy.cvm_key_release,
+    azurerm_virtual_machine_extension.guest_attestation
+  ]
+}
