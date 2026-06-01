@@ -4,10 +4,12 @@ output "tenant_id" {
   value = data.azurerm_client_config.current.tenant_id
 }
 
+# URL of the key in Key Vault
 locals {
   kek_url = azapi_resource.cvm_key.output.properties.keyUriWithVersion
 }
 
+# Random suffix to avoid name conflicts in Key Vault
 resource "random_string" "suffix" {
   length  = 6
   special = false
@@ -144,6 +146,7 @@ resource "azurerm_key_vault" "this" {
   tags                        = var.tags
 }
 
+# Permissions for the Confidential VM orchestrator to get and release the key for encrypting the OS disk
 resource "azurerm_key_vault_access_policy" "cvm_agent" {
   key_vault_id = azurerm_key_vault.this.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
@@ -152,6 +155,7 @@ resource "azurerm_key_vault_access_policy" "cvm_agent" {
   key_permissions = ["Get", "Release"]
 }
 
+# Creation of the Disk Encryption Set with the key from Key Vault
 resource "azurerm_disk_encryption_set" "this" {
   name                = var.disk_encryption_set_name
   location            = azurerm_resource_group.this.location
@@ -164,6 +168,7 @@ resource "azurerm_disk_encryption_set" "this" {
   }
 }
 
+# Permissions for the Disk Encryption Set to access the key in Key Vault
 resource "azurerm_key_vault_access_policy" "des" {
   key_vault_id = azurerm_key_vault.this.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
@@ -172,7 +177,7 @@ resource "azurerm_key_vault_access_policy" "des" {
   key_permissions = ["Get", "WrapKey", "UnwrapKey"]
 }
 
-
+# Permissions for the current user to manage the Key Vault and the keys
 resource "azurerm_key_vault_access_policy" "current_user" {
   key_vault_id = azurerm_key_vault.this.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
@@ -181,6 +186,7 @@ resource "azurerm_key_vault_access_policy" "current_user" {
   key_permissions = ["Create", "Delete", "Get", "List", "Purge", "Update", "GetRotationPolicy"]
 }
 
+# Permissions for the CVM to release the key for encrypting the temp disk
 resource "azurerm_key_vault_access_policy" "cvm_key_release" {
   key_vault_id = azurerm_key_vault.this.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
@@ -190,12 +196,15 @@ resource "azurerm_key_vault_access_policy" "cvm_key_release" {
   secret_permissions = ["Get", "Set", "List"]
 }
 
+# If using RBAC for Key Vault instead of access policies:
+# --------------------------------
 # resource "azurerm_role_assignment" "cvm_key_release" {
 #   principal_id         = azurerm_linux_virtual_machine.this.identity[0].principal_id
 #   scope                = azapi_resource.cvm_key.id
 #   role_definition_name = "Key Vault Crypto Service Release User"
 # }
 
+# GuestAttestation extension required for integrity monitoring
 resource "azurerm_virtual_machine_extension" "guest_attestation" {
   name                       = "GuestAttestation"
   virtual_machine_id         = azurerm_linux_virtual_machine.this.id
@@ -224,10 +233,12 @@ resource "azurerm_virtual_machine_extension" "guest_attestation" {
   SETTINGS
 }
 
+# Location of the CVM release policy file
 data "local_file" "cvm_release_policy" {
   filename = "${path.root}/cvm-release-policy.json"
 }
 
+# Creation of the key in Key Vault with the CVM release policy attached
 resource "azapi_resource" "cvm_key" {
   type                   = "Microsoft.KeyVault/vaults/keys@2025-05-01"
   name                   = var.vm_name
@@ -255,6 +266,7 @@ resource "azapi_resource" "cvm_key" {
   }
 }
 
+# ADE extension to enable temp disk encryption
 resource "azurerm_virtual_machine_extension" "azure_disk_encryption" {
   name                       = "AzureDiskEncryptionForLinux"
   virtual_machine_id         = azurerm_linux_virtual_machine.this.id
