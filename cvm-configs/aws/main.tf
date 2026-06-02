@@ -40,6 +40,10 @@ resource "aws_instance" "cvm-test" {
     amd_sev_snp = var.amd_sev_snp
   }
 
+  root_block_device {
+    encrypted = true
+  }
+
   associate_public_ip_address = true
 
   tags = var.tags
@@ -49,9 +53,9 @@ resource "aws_instance" "cvm-test" {
       condition     = data.aws_ami.selected.tpm_support == "v2.0"
       error_message = "AMI must have NitroTPM v2.0 support enabled."
     }
-    # precondition {
-    #   condition     = data.aws_ami.selected.boot_mode == "uefi" && data.aws_ami.selected.uefi_data != null && data.aws_ami.selected.uefi_data != ""
-    #   error_message = "AMI must use UEFI boot mode with Secure Boot keys configured (uefi_data)."
-    # }
+    precondition {
+      condition     = data.aws_ami.selected.boot_mode == "uefi" && data.aws_ami.selected.uefi_data != null && data.aws_ami.selected.uefi_data != ""
+      error_message = "AMI must use UEFI boot mode with Secure Boot keys configured (uefi_data)."
+    }
   }
 }

@@ -1,0 +1,5 @@
+project_id            = "master-thesis-cvms"
+region                = "europe-west4"
+zone                  = "europe-west4-c"
+subnetwork            = "projects/master-thesis-cvms/regions/europe-west4/subnetworks/default"
+service_account_email = "263489800082-compute@developer.gserviceaccount.com"

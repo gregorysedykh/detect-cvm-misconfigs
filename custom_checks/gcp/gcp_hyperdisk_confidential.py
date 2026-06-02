@@ -25,4 +25,4 @@ class GCPHyperdiskConfidentialMode(BaseResourceCheck):
         return CheckResult.FAILED
 
 
-check = GCPHyperdiskConfidentialMode
+check = GCPHyperdiskConfidentialMode()
